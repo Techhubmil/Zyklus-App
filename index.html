@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Zyklus</title>
+  <meta name="theme-color" content="#f72d6e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Zyklus" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./icons/icon-180.png" />
+  <link rel="icon" href="./icons/icon-192.png" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <h1>Zyklus</h1>
+    </header>
+
+    <div id="backup-reminder" class="backup-banner" hidden></div>
+
+    <main>
+      <section class="tab-panel" data-panel="calendar">
+        <div id="cycle-summary" class="summary"></div>
+        <button id="quick-today-btn" class="btn btn-primary quick-today-btn"></button>
+        <div id="calendar-container" class="card"></div>
+        <div class="legend">
+          <span><i class="dot-legend dot-legend--period"></i> Periode</span>
+          <span><i class="dot-legend dot-legend--spotting"></i> Schmierblutung</span>
+          <span><i class="dot-legend dot-legend--predicted"></i> Vorhersage</span>
+          <span><i class="dot-legend dot-legend--fertile"></i> Fruchtbar</span>
+          <span><i class="dot-legend dot-legend--ovulation"></i> Eisprung</span>
+        </div>
+      </section>
+
+      <section class="tab-panel" data-panel="stats" hidden>
+        <div id="stats-container"></div>
+      </section>
+
+      <section class="tab-panel" data-panel="settings" hidden>
+        <div id="settings-container"></div>
+      </section>
+    </main>
+
+    <nav class="tab-bar">
+      <button data-tab="calendar" class="active">
+        <span class="tab-icon">📅</span>
+        <span>Kalender</span>
+      </button>
+      <button data-tab="stats">
+        <span class="tab-icon">📊</span>
+        <span>Statistik</span>
+      </button>
+      <button data-tab="settings">
+        <span class="tab-icon">⚙️</span>
+        <span>Einstellungen</span>
+      </button>
+    </nav>
+  </div>
+
+  <div id="day-sheet-backdrop" class="sheet-backdrop" hidden></div>
+  <div id="day-sheet" class="sheet" hidden></div>
+
+  <div id="modal-backdrop" class="sheet-backdrop" hidden></div>
+  <div id="modal" class="modal-card" hidden></div>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
