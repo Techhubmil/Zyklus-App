@@ -125,6 +125,10 @@ export function renderCalendar(container, viewDate, entries, prediction, onDayTa
       cancelTimer();
       if (!wasLongPress) onDayTap(btn.dataset.date);
     });
+    // keyboard / VoiceOver activation arrives as a click without pointer events (detail === 0)
+    btn.addEventListener("click", (e) => {
+      if (e.detail === 0) onDayLongPress(btn.dataset.date);
+    });
     btn.addEventListener("pointerleave", cancelTimer);
     btn.addEventListener("pointercancel", cancelTimer);
   });

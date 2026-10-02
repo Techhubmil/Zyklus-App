@@ -1,4 +1,4 @@
-import { loadData, saveData, clearAllData, setEntry, getEntry } from "./storage.js";
+import { loadData, saveData, clearAllData, setEntry, getEntry, normalizeData } from "./storage.js";
 import { computePrediction, toDateKey, fromDateKey, diffDays } from "./predict.js";
 import { renderCalendar } from "./calendar.js";
 import { renderStats, resetStatsView } from "./stats.js";
@@ -53,10 +53,17 @@ const modalBackdrop = document.getElementById("modal-backdrop");
 
 // iOS hides window.prompt/alert/confirm for "Add to Home Screen" apps, so every
 // confirmation/input in this app uses this in-page modal instead of those.
+let modalCloseTimer = null;
+
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
 function closeModal() {
   modalBackdrop.classList.remove("visible");
   modalEl.classList.remove("visible");
-  setTimeout(() => {
+  clearTimeout(modalCloseTimer);
+  modalCloseTimer = setTimeout(() => {
     modalBackdrop.hidden = true;
     modalEl.hidden = true;
     modalEl.innerHTML = "";
@@ -64,6 +71,7 @@ function closeModal() {
 }
 
 function openModal(html) {
+  clearTimeout(modalCloseTimer);
   modalEl.innerHTML = html;
   modalBackdrop.hidden = false;
   modalEl.hidden = false;
@@ -139,6 +147,10 @@ function showTypedConfirm(message, requiredWord, { title = "", confirmLabel = "L
       closeModal();
       resolve(ok);
     });
+    modalBackdrop.onclick = () => {
+      closeModal();
+      resolve(false);
+    };
   });
 }
 
@@ -171,9 +183,11 @@ function renderBackupReminder() {
   const hasData = Object.keys(data.entries).length > 0;
   const { lastExportAt, backupReminderEnabled, backupReminderSnoozedAt } = data.settings;
   const now = new Date();
-  const daysSince = lastExportAt ? diffDays(new Date(lastExportAt), now) : null;
+  const oldestEntryKey = Object.keys(data.entries).sort()[0];
+  const reference = lastExportAt ? new Date(lastExportAt) : oldestEntryKey ? fromDateKey(oldestEntryKey) : null;
+  const daysSince = reference ? diffDays(reference, now) : null;
   const daysSinceSnooze = backupReminderSnoozedAt ? diffDays(new Date(backupReminderSnoozedAt), now) : null;
-  const exportDue = daysSince === null || daysSince >= BACKUP_REMINDER_DAYS;
+  const exportDue = daysSince !== null && daysSince >= BACKUP_REMINDER_DAYS;
   const snoozed = daysSinceSnooze !== null && daysSinceSnooze < BACKUP_SNOOZE_DAYS;
   const shouldShow = backupReminderEnabled !== false && hasData && exportDue && !snoozed;
 
@@ -184,7 +198,7 @@ function renderBackupReminder() {
 
   const message = lastExportAt
     ? `Letztes Backup vor ${daysSince} Tagen — jetzt sichern?`
-    : "Noch kein Backup deiner Daten erstellt — jetzt sichern?";
+    : `Noch kein Backup deiner Daten erstellt (Einträge seit ${daysSince} Tagen) — jetzt sichern?`;
 
   el.innerHTML = `
     <p>💾 ${message}</p>
@@ -246,10 +260,15 @@ function getCurrentPhase(prediction) {
   const dayOfCycle = prediction.currentCycleDay;
 
   let loggedPeriodDays = 0;
-  for (let i = 0; i < 15; i++) {
+  let missed = 0;
+  for (let i = 0; i < 15 && missed < 3; i++) {
     const d = new Date(prediction.lastStart.getFullYear(), prediction.lastStart.getMonth(), prediction.lastStart.getDate() + i);
-    if (data.entries[toDateKey(d)]?.period) loggedPeriodDays++;
-    else break;
+    if (data.entries[toDateKey(d)]?.period) {
+      loggedPeriodDays = i + 1;
+      missed = 0;
+    } else {
+      missed++;
+    }
   }
   const todayLogged = data.entries[toDateKey(today)]?.period;
 
@@ -355,7 +374,7 @@ function openDaySheet(dateKey) {
     </div>
     <div class="field-group">
       <span class="field-label">Notiz</span>
-      <textarea id="field-note" rows="3" placeholder="Eigene Notiz...">${entry.note || ""}</textarea>
+      <textarea id="field-note" rows="3" placeholder="Eigene Notiz...">${escapeHtml(entry.note || "")}</textarea>
     </div>
     <div class="sheet-actions">
       <button class="btn btn-secondary" id="sheet-cancel">Abbrechen</button>
@@ -416,9 +435,10 @@ function openDaySheet(dateKey) {
     closeDaySheet();
     render();
   });
-  daySheetBackdrop.addEventListener("click", closeDaySheet);
+  daySheetBackdrop.onclick = closeDaySheet;
   setupSheetDragToClose();
 
+  clearTimeout(daySheetCloseTimer);
   daySheet.style.transform = "";
   daySheet.style.transition = "";
   daySheetBackdrop.hidden = false;
@@ -464,13 +484,16 @@ function setupSheetDragToClose() {
   });
 }
 
+let daySheetCloseTimer = null;
+
 function closeDaySheet() {
   daySheetBackdrop.classList.remove("visible");
   daySheet.classList.remove("visible");
   daySheet.style.transform = "";
   selectedDateKey = null;
   document.querySelectorAll(".cal-day--selected").forEach((el) => el.classList.remove("cal-day--selected"));
-  setTimeout(() => {
+  clearTimeout(daySheetCloseTimer);
+  daySheetCloseTimer = setTimeout(() => {
     daySheetBackdrop.hidden = true;
     daySheet.hidden = true;
   }, 250);
@@ -576,14 +599,16 @@ function renderSettings() {
   });
 
   el.querySelector("#setting-avg-cycle").addEventListener("change", (e) => {
-    const val = Number(e.target.value);
-    data.settings.avgCycleLengthOverride = val > 0 ? val : null;
+    const val = Math.round(Number(e.target.value));
+    data.settings.avgCycleLengthOverride = val >= 15 && val <= 60 ? val : null;
+    e.target.value = data.settings.avgCycleLengthOverride || "";
     saveData(data);
     render();
   });
   el.querySelector("#setting-luteal").addEventListener("change", (e) => {
-    const val = Number(e.target.value);
-    data.settings.lutealPhaseLength = val > 0 ? val : 14;
+    const val = Math.round(Number(e.target.value));
+    data.settings.lutealPhaseLength = val >= 8 && val <= 20 ? val : 14;
+    e.target.value = data.settings.lutealPhaseLength;
     saveData(data);
     render();
   });
@@ -607,6 +632,8 @@ function renderSettings() {
     if (ok) {
       clearAllData();
       data = loadData();
+      applyTheme();
+      resetStatsView();
       render();
     }
   });
@@ -636,14 +663,15 @@ function importData(e) {
   const reader = new FileReader();
   reader.onload = async () => {
     try {
-      const parsed = JSON.parse(reader.result);
-      if (!parsed.entries || !parsed.settings) throw new Error("Ungültiges Format");
+      const parsed = normalizeData(JSON.parse(reader.result));
       const ok = await showConfirm("Bestehende Daten werden ersetzt.", {
         title: "Importierte Daten übernehmen?",
       });
       if (ok) {
         data = parsed;
         saveData(data);
+        applyTheme();
+        resetStatsView();
         render();
         await showMessage("Import erfolgreich.");
       }
@@ -700,9 +728,11 @@ function applyTheme() {
 function setupAutoUpdate() {
   if (!("serviceWorker" in navigator)) return;
 
+  // only reload for real updates, not on the very first install (no previous controller)
+  const hadController = !!navigator.serviceWorker.controller;
   let reloadedAlready = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (reloadedAlready) return;
+    if (!hadController || reloadedAlready) return;
     reloadedAlready = true;
     window.location.reload();
   });

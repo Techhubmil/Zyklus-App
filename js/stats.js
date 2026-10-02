@@ -141,7 +141,7 @@ export function renderStats(container, prediction) {
         <div class="stat-box"><div class="stat-value">${c.periodLen || "–"}</div><div class="stat-label">Periodendauer (Tage)</div></div>
       </div>`;
     pieTitle = `Zyklusphasen${pieMore}`;
-    pieHtml = phasePieChart(pieCycle, c.periodLen || avgPeriod);
+    pieHtml = phasePieChart(pieCycle, c.ongoing ? Math.max(c.periodLen || 0, avgPeriod) : c.periodLen || avgPeriod);
   }
 
   const historyRows = cycles

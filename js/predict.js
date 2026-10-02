@@ -22,49 +22,34 @@ export function diffDays(a, b) {
   return Math.round((utcB - utcA) / DAY_MS);
 }
 
-/** Sorted ascending array of Date objects marking the first day of each logged period. */
-export function getPeriodStarts(entries) {
-  const periodDates = Object.keys(entries)
+const MAX_GAP_DAYS = 3; // a forgotten day inside one period must not split it into two
+
+/** Groups logged (non-spotting) period days into runs: { start: Date, end: Date }. */
+function getPeriodRuns(entries) {
+  const keys = Object.keys(entries)
     .filter((k) => entries[k].period && entries[k].flow !== "spotting")
     .sort();
-  const starts = [];
-  let prevKey = null;
-  for (const key of periodDates) {
-    if (prevKey) {
-      const prevDate = fromDateKey(prevKey);
-      const curDate = fromDateKey(key);
-      if (diffDays(prevDate, curDate) === 1) {
-        prevKey = key;
-        continue;
-      }
+  const runs = [];
+  for (const key of keys) {
+    const date = fromDateKey(key);
+    const last = runs[runs.length - 1];
+    if (last && diffDays(last.end, date) <= MAX_GAP_DAYS) {
+      last.end = date;
+    } else {
+      runs.push({ start: date, end: date });
     }
-    starts.push(fromDateKey(key));
-    prevKey = key;
   }
-  return starts;
+  return runs;
 }
 
-/** Length in days of each logged period (consecutive period:true run). */
+/** Sorted ascending array of Date objects marking the first day of each logged period. */
+export function getPeriodStarts(entries) {
+  return getPeriodRuns(entries).map((r) => r.start);
+}
+
+/** Length in days of each logged period (first to last logged day, same order as the starts). */
 export function getPeriodLengths(entries) {
-  const periodDates = Object.keys(entries)
-    .filter((k) => entries[k].period && entries[k].flow !== "spotting")
-    .sort();
-  const lengths = [];
-  let runStart = null;
-  let runLength = 0;
-  let prevKey = null;
-  for (const key of periodDates) {
-    if (prevKey && diffDays(fromDateKey(prevKey), fromDateKey(key)) === 1) {
-      runLength += 1;
-    } else {
-      if (runStart) lengths.push(runLength);
-      runStart = key;
-      runLength = 1;
-    }
-    prevKey = key;
-  }
-  if (runStart) lengths.push(runLength);
-  return lengths;
+  return getPeriodRuns(entries).map((r) => diffDays(r.start, r.end) + 1);
 }
 
 export function getCycleLengths(periodStarts) {
@@ -105,8 +90,12 @@ export function computePrediction(entries, settings) {
     cycleLengths,
     settings.avgCycleLengthOverride
   );
-  const avgPeriod = averagePeriodLength(periodLengths);
   const today = new Date();
+  // a period that is still being logged is incomplete and must not shorten the average
+  const runs = getPeriodRuns(entries);
+  const lastRun = runs[runs.length - 1];
+  const stillOngoing = lastRun && diffDays(lastRun.end, today) <= MAX_GAP_DAYS && runs.length > 1;
+  const avgPeriod = averagePeriodLength(stillOngoing ? periodLengths.slice(0, -1) : periodLengths);
   const startsNotInFuture = periodStarts.filter((d) => diffDays(d, today) >= 0);
   const lastStart = startsNotInFuture[startsNotInFuture.length - 1] || null;
 
