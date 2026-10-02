@@ -633,3 +633,19 @@ textarea {
   color: var(--pink);
   font-weight: 600;
 }
+
+/* Cycle phase indicator */
+.phase-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+.phase-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}

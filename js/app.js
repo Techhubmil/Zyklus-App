@@ -210,13 +210,49 @@ function renderSummary(prediction) {
   }
   const fmt = (d) =>
     d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+  const phase = getCurrentPhase(prediction);
   el.innerHTML = `
     <div class="summary-row">
       <div><strong>Zyklustag</strong><div>${prediction.currentCycleDay}</div></div>
       <div><strong>Nächste Periode</strong><div>${fmt(prediction.nextPeriodStart)}</div></div>
       <div><strong>Fruchtbares Fenster</strong><div>${fmt(prediction.fertileStart)}–${fmt(prediction.fertileEnd)}</div></div>
     </div>
+    <div class="phase-row">
+      <i class="phase-dot" style="background:${phase.color}"></i>
+      <strong>${phase.label}</strong>
+      <span class="muted">· Tag ${prediction.currentCycleDay}</span>
+    </div>
   `;
+}
+
+function getCurrentPhase(prediction) {
+  const today = new Date();
+  const dayOfCycle = prediction.currentCycleDay;
+
+  let loggedPeriodDays = 0;
+  for (let i = 0; i < 15; i++) {
+    const d = new Date(prediction.lastStart.getFullYear(), prediction.lastStart.getMonth(), prediction.lastStart.getDate() + i);
+    if (data.entries[toDateKey(d)]?.period) loggedPeriodDays++;
+    else break;
+  }
+  const todayLogged = data.entries[toDateKey(today)]?.period;
+
+  if (todayLogged || dayOfCycle <= loggedPeriodDays) {
+    return { label: "Menstruation", color: "var(--pink)" };
+  }
+  if (diffDays(today, prediction.nextPeriodStart) <= 0) {
+    return { label: "Periode erwartet", color: "var(--pink)" };
+  }
+  if (diffDays(today, prediction.ovulationDay) === 0) {
+    return { label: "Eisprung", color: "var(--purple)" };
+  }
+  if (diffDays(prediction.fertileStart, today) >= 0 && diffDays(today, prediction.fertileEnd) >= 0) {
+    return { label: "Fruchtbares Fenster", color: "var(--purple)" };
+  }
+  if (diffDays(today, prediction.fertileStart) > 0) {
+    return { label: "Follikelphase", color: "var(--text-muted)" };
+  }
+  return { label: "Lutealphase", color: "color-mix(in srgb, var(--pink) 45%, var(--surface))" };
 }
 
 function renderQuickTodayButton() {
