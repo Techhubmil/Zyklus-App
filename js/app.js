@@ -4,6 +4,7 @@ import { renderCalendar } from "./calendar.js";
 import { renderStats } from "./stats.js";
 
 const BACKUP_REMINDER_DAYS = 30;
+const BACKUP_SNOOZE_DAYS = 1;
 
 const SYMPTOM_OPTIONS = [
   "Krämpfe",
@@ -158,7 +159,7 @@ function renderBackupReminder() {
   const daysSince = lastExportAt ? diffDays(new Date(lastExportAt), now) : null;
   const daysSinceSnooze = backupReminderSnoozedAt ? diffDays(new Date(backupReminderSnoozedAt), now) : null;
   const exportDue = daysSince === null || daysSince >= BACKUP_REMINDER_DAYS;
-  const snoozed = daysSinceSnooze !== null && daysSinceSnooze < BACKUP_REMINDER_DAYS;
+  const snoozed = daysSinceSnooze !== null && daysSinceSnooze < BACKUP_SNOOZE_DAYS;
   const shouldShow = backupReminderEnabled !== false && hasData && exportDue && !snoozed;
 
   if (!shouldShow) {
@@ -446,7 +447,7 @@ function renderSettings() {
       <h3>Daten</h3>
       <p class="muted">Alle Daten bleiben ausschließlich auf diesem Gerät. Nichts wird übertragen.</p>
       <div class="field-group">
-        <span class="field-label">Backup-Erinnerung (höchstens einmal im Monat)</span>
+        <span class="field-label">Backup-Erinnerung (wenn das letzte Backup über 30 Tage her ist)</span>
         <div class="chip-row" id="backup-reminder-chips">
           <button type="button" class="chip ${backupReminderEnabled !== false ? "chip--active" : ""}" data-backup-reminder="on">An</button>
           <button type="button" class="chip ${backupReminderEnabled === false ? "chip--active" : ""}" data-backup-reminder="off">Aus</button>
