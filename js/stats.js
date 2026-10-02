@@ -67,7 +67,12 @@ function phasePieChart(avgCycle, avgPeriod) {
   `;
 }
 
-const view = { mode: "all", index: null };
+const view = { mode: "cycle", index: null };
+
+export function resetStatsView() {
+  view.mode = "cycle";
+  view.index = null;
+}
 
 function mean(nums) {
   return nums.reduce((a, b) => a + b, 0) / nums.length;
@@ -155,8 +160,8 @@ export function renderStats(container, prediction) {
 
   container.innerHTML = `
     <div class="chip-row stats-toggle">
-      <button type="button" class="chip ${view.mode === "all" ? "chip--active" : ""}" data-mode="all">Gesamt Ø</button>
       <button type="button" class="chip ${view.mode === "cycle" ? "chip--active" : ""}" data-mode="cycle" ${cycles.length ? "" : "disabled"}>Pro Zyklus</button>
+      <button type="button" class="chip ${view.mode === "all" ? "chip--active" : ""}" data-mode="all">Gesamt Ø</button>
     </div>
     <div class="card">${topHtml}</div>
     <div class="card">

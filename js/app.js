@@ -1,7 +1,7 @@
 import { loadData, saveData, clearAllData, setEntry, getEntry } from "./storage.js";
 import { computePrediction, toDateKey, fromDateKey, diffDays } from "./predict.js";
 import { renderCalendar } from "./calendar.js";
-import { renderStats } from "./stats.js";
+import { renderStats, resetStatsView } from "./stats.js";
 
 const BACKUP_REMINDER_DAYS = 30;
 const BACKUP_SNOOZE_DAYS = 1;
@@ -622,6 +622,7 @@ function importData(e) {
 function setupTabs() {
   document.querySelectorAll(".tab-bar button").forEach((btn) => {
     btn.addEventListener("click", () => {
+      if (btn.dataset.tab === "stats" && activeTab !== "stats") resetStatsView();
       activeTab = btn.dataset.tab;
       render();
     });
