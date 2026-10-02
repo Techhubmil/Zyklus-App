@@ -649,3 +649,9 @@ textarea {
   border-radius: 50%;
   display: inline-block;
 }
+
+.phase-sub {
+  text-align: center;
+  font-size: 0.8rem;
+  margin-top: 4px;
+}

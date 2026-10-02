@@ -222,7 +222,16 @@ function renderSummary(prediction) {
       <strong>${phase.label}</strong>
       <span class="muted">· Tag ${prediction.currentCycleDay}</span>
     </div>
+    <div class="phase-sub muted">${ovulationText(prediction)}</div>
   `;
+}
+
+function ovulationText(prediction) {
+  const diff = diffDays(new Date(), prediction.ovulationDay);
+  const date = prediction.ovulationDay.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+  if (diff === 0) return "Eisprung voraussichtlich heute";
+  if (diff > 0) return `Eisprung voraussichtlich am ${date}`;
+  return `Eisprung war voraussichtlich am ${date}`;
 }
 
 function getCurrentPhase(prediction) {
