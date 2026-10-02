@@ -16,6 +16,14 @@ const SYMPTOM_OPTIONS = [
   "Heißhunger",
   "Anxiety",
 ];
+const ACCENT_OPTIONS = [
+  { value: "rose", label: "Rosé", color: "#f72d6e" },
+  { value: "berry", label: "Beere", color: "#b5179e" },
+  { value: "ocean", label: "Ozean", color: "#1d7fe0" },
+  { value: "sage", label: "Salbei", color: "#2f9e6b" },
+  { value: "sunset", label: "Sonnenuntergang", color: "#ef6c1a" },
+  { value: "graphite", label: "Graphit", color: "#3d4852" },
+];
 const MOOD_OPTIONS = ["😊", "😐", "😣", "😢", "😡", "😴"];
 const FLOW_OPTIONS = [
   { value: "none", label: "Keine" },
@@ -418,7 +426,8 @@ function closeDaySheet() {
 
 function renderSettings() {
   const el = document.getElementById("settings-container");
-  const { avgCycleLengthOverride, lutealPhaseLength, themeOverride, backupReminderEnabled } = data.settings;
+  const { avgCycleLengthOverride, lutealPhaseLength, themeOverride, backupReminderEnabled, accent } = data.settings;
+  const currentAccent = accent || "rose";
   const theme = themeOverride || "system";
   el.innerHTML = `
     <div class="card">
@@ -429,6 +438,15 @@ function renderSettings() {
           <button type="button" class="chip ${theme === "system" ? "chip--active" : ""}" data-theme-option="system">System</button>
           <button type="button" class="chip ${theme === "light" ? "chip--active" : ""}" data-theme-option="light">Hell</button>
           <button type="button" class="chip ${theme === "dark" ? "chip--active" : ""}" data-theme-option="dark">Dunkel</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <span class="field-label">Farbschema</span>
+        <div class="chip-row" id="accent-chips">
+          ${ACCENT_OPTIONS.map(
+            (a) =>
+              `<button type="button" class="chip ${currentAccent === a.value ? "chip--active" : ""}" data-accent-option="${a.value}"><i class="swatch-dot" style="background:${a.color}"></i>${a.label}</button>`
+          ).join("")}
         </div>
       </div>
     </div>
@@ -463,6 +481,16 @@ function renderSettings() {
       </div>
     </div>
   `;
+
+  el.querySelectorAll("#accent-chips .chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      data.settings.accent = chip.dataset.accentOption === "rose" ? null : chip.dataset.accentOption;
+      saveData(data);
+      applyTheme();
+      el.querySelectorAll("#accent-chips .chip").forEach((c) => c.classList.remove("chip--active"));
+      chip.classList.add("chip--active");
+    });
+  });
 
   el.querySelectorAll("#theme-chips .chip").forEach((chip) => {
     chip.addEventListener("click", () => {
@@ -573,6 +601,15 @@ function setupCalendarNav() {
 }
 
 function applyTheme() {
+  const accent = data.settings.accent;
+  if (accent && ACCENT_OPTIONS.some((a) => a.value === accent)) {
+    document.documentElement.dataset.accent = accent;
+  } else {
+    delete document.documentElement.dataset.accent;
+  }
+  const accentColor = (ACCENT_OPTIONS.find((a) => a.value === accent) || ACCENT_OPTIONS[0]).color;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", accentColor);
+
   const theme = data.settings.themeOverride;
   if (theme === "light" || theme === "dark") {
     document.documentElement.dataset.theme = theme;

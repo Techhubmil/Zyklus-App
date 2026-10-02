@@ -7,6 +7,7 @@ function defaultData() {
       avgCycleLengthOverride: null,
       lutealPhaseLength: 14,
       themeOverride: null,
+      accent: null,
       lastExportAt: null,
       backupReminderEnabled: true,
       backupReminderSnoozedAt: null,

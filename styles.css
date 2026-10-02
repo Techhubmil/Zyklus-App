@@ -1,39 +1,53 @@
+/* Accent colours: only --pink (main) and --purple (fertile) change per scheme;
+   all tints/backgrounds are derived from them. */
 :root {
   --pink: #f72d6e;
-  --pink-light: #ffe3ec;
   --purple: #8b6df7;
-  --purple-light: #ece5ff;
-  --bg: #fff5f7;
-  --card-bg: #ffffff;
+  --danger: #d6336c;
+  --surface: #ffffff;
+  --bg-base: #ffffff;
   --text: #2a1f27;
   --text-muted: #8a7b82;
-  --border: #f3dde3;
-  --danger: #d6336c;
+  --card-bg: var(--surface);
+  --bg: color-mix(in srgb, var(--pink) 5%, var(--bg-base));
+  --pink-light: color-mix(in srgb, var(--pink) 14%, var(--surface));
+  --purple-light: color-mix(in srgb, var(--purple) 14%, var(--surface));
+  --border: color-mix(in srgb, var(--pink) 14%, var(--surface));
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #1c1419;
-    --card-bg: #2a1f26;
+    --surface: #2a2228;
+    --bg-base: #1a1418;
     --text: #f5eef1;
     --text-muted: #b5a3ac;
-    --border: #3a2b33;
-    --pink-light: #3a1f2b;
-    --purple-light: #28213f;
+    --pink-light: color-mix(in srgb, var(--pink) 16%, var(--surface));
+    --purple-light: color-mix(in srgb, var(--purple) 18%, var(--surface));
+    --border: color-mix(in srgb, var(--pink) 10%, #3a3238);
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #1c1419;
-  --card-bg: #2a1f26;
+  --surface: #2a2228;
+  --bg-base: #1a1418;
   --text: #f5eef1;
   --text-muted: #b5a3ac;
-  --border: #3a2b33;
-  --pink-light: #3a1f2b;
-  --purple-light: #28213f;
+  --pink-light: color-mix(in srgb, var(--pink) 16%, var(--surface));
+  --purple-light: color-mix(in srgb, var(--purple) 18%, var(--surface));
+  --border: color-mix(in srgb, var(--pink) 10%, #3a3238);
   color-scheme: dark;
+}
+
+:root[data-accent="ocean"] { --pink: #1d7fe0; --purple: #14a89a; --danger: #d6336c; }
+:root[data-accent="berry"] { --pink: #b5179e; --purple: #4c6ef5; }
+:root[data-accent="sage"] { --pink: #2f9e6b; --purple: #d9930d; }
+:root[data-accent="sunset"] { --pink: #ef6c1a; --purple: #c2185b; }
+:root[data-accent="graphite"] { --pink: #3d4852; --purple: #8a94a6; }
+
+@supports not (background: color-mix(in srgb, red 5%, white)) {
+  :root { --bg: #fff5f7; --pink-light: #ffe3ec; --purple-light: #ece5ff; --border: #f3dde3; }
 }
 
 * {
@@ -77,6 +91,9 @@ body {
   gap: 10px;
   font-size: 0.82rem;
   color: var(--text);
+}
+.backup-banner[hidden] {
+  display: none;
 }
 .backup-banner p {
   flex: 1;
@@ -574,3 +591,14 @@ textarea {
   border-bottom: none;
 }
 
+
+/* Colour scheme picker */
+.swatch-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: -1px;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.7);
+}
