@@ -8,6 +8,8 @@ function defaultData() {
       lutealPhaseLength: 14,
       themeOverride: null,
       lastExportAt: null,
+      backupReminderEnabled: true,
+      backupReminderSnoozedAt: null,
     },
   };
 }

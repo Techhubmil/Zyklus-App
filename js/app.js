@@ -28,7 +28,6 @@ let data = loadData();
 let viewDate = new Date();
 let activeTab = "calendar";
 let selectedDateKey = null;
-let backupReminderDismissed = false;
 
 const app = document.getElementById("app");
 const daySheet = document.getElementById("day-sheet");
@@ -154,10 +153,13 @@ function render() {
 function renderBackupReminder() {
   const el = document.getElementById("backup-reminder");
   const hasData = Object.keys(data.entries).length > 0;
-  const { lastExportAt } = data.settings;
-  const daysSince = lastExportAt ? diffDays(new Date(lastExportAt), new Date()) : null;
-  const shouldShow =
-    !backupReminderDismissed && hasData && (daysSince === null || daysSince >= BACKUP_REMINDER_DAYS);
+  const { lastExportAt, backupReminderEnabled, backupReminderSnoozedAt } = data.settings;
+  const now = new Date();
+  const daysSince = lastExportAt ? diffDays(new Date(lastExportAt), now) : null;
+  const daysSinceSnooze = backupReminderSnoozedAt ? diffDays(new Date(backupReminderSnoozedAt), now) : null;
+  const exportDue = daysSince === null || daysSince >= BACKUP_REMINDER_DAYS;
+  const snoozed = daysSinceSnooze !== null && daysSinceSnooze < BACKUP_REMINDER_DAYS;
+  const shouldShow = backupReminderEnabled !== false && hasData && exportDue && !snoozed;
 
   if (!shouldShow) {
     el.hidden = true;
@@ -170,14 +172,23 @@ function renderBackupReminder() {
 
   el.innerHTML = `
     <p>💾 ${message}</p>
-    <button class="btn btn-secondary" id="backup-reminder-later">Später</button>
-    <button class="btn btn-primary" id="backup-reminder-export">Jetzt sichern</button>
+    <div class="backup-banner-actions">
+      <button class="btn btn-primary" id="backup-reminder-export">Jetzt sichern</button>
+      <button class="btn btn-secondary" id="backup-reminder-later">Später</button>
+      <button class="backup-banner-off" id="backup-reminder-off">Nicht mehr erinnern</button>
+    </div>
   `;
   el.hidden = false;
 
   el.querySelector("#backup-reminder-later").addEventListener("click", () => {
-    backupReminderDismissed = true;
-    el.hidden = true;
+    data.settings.backupReminderSnoozedAt = new Date().toISOString();
+    saveData(data);
+    renderBackupReminder();
+  });
+  el.querySelector("#backup-reminder-off").addEventListener("click", () => {
+    data.settings.backupReminderEnabled = false;
+    saveData(data);
+    renderBackupReminder();
   });
   el.querySelector("#backup-reminder-export").addEventListener("click", exportData);
 }
@@ -406,7 +417,7 @@ function closeDaySheet() {
 
 function renderSettings() {
   const el = document.getElementById("settings-container");
-  const { avgCycleLengthOverride, lutealPhaseLength, themeOverride } = data.settings;
+  const { avgCycleLengthOverride, lutealPhaseLength, themeOverride, backupReminderEnabled } = data.settings;
   const theme = themeOverride || "system";
   el.innerHTML = `
     <div class="card">
@@ -434,6 +445,13 @@ function renderSettings() {
     <div class="card">
       <h3>Daten</h3>
       <p class="muted">Alle Daten bleiben ausschließlich auf diesem Gerät. Nichts wird übertragen.</p>
+      <div class="field-group">
+        <span class="field-label">Backup-Erinnerung (höchstens einmal im Monat)</span>
+        <div class="chip-row" id="backup-reminder-chips">
+          <button type="button" class="chip ${backupReminderEnabled !== false ? "chip--active" : ""}" data-backup-reminder="on">An</button>
+          <button type="button" class="chip ${backupReminderEnabled === false ? "chip--active" : ""}" data-backup-reminder="off">Aus</button>
+        </div>
+      </div>
       <div class="settings-actions">
         <button class="btn btn-secondary" id="export-btn">Exportieren (Datei speichern)</button>
         <label class="btn btn-secondary file-btn">
@@ -467,6 +485,16 @@ function renderSettings() {
     data.settings.lutealPhaseLength = val > 0 ? val : 14;
     saveData(data);
     render();
+  });
+
+  el.querySelectorAll("#backup-reminder-chips .chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      data.settings.backupReminderEnabled = chip.dataset.backupReminder === "on";
+      saveData(data);
+      el.querySelectorAll("#backup-reminder-chips .chip").forEach((c) => c.classList.remove("chip--active"));
+      chip.classList.add("chip--active");
+      renderBackupReminder();
+    });
   });
 
   el.querySelector("#export-btn").addEventListener("click", exportData);
