@@ -8,6 +8,7 @@ function defaultData() {
       lutealPhaseLength: 14,
       themeOverride: null,
       accent: null,
+      uiStyle: null,
       lastExportAt: null,
       backupReminderEnabled: true,
       backupReminderSnoozedAt: null,

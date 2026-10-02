@@ -24,6 +24,13 @@ const ACCENT_OPTIONS = [
   { value: "sunset", label: "Sonnenuntergang", color: "#ef6c1a" },
   { value: "graphite", label: "Graphit", color: "#3d4852" },
 ];
+const STYLE_OPTIONS = [
+  { value: "soft", label: "Weich" },
+  { value: "clean", label: "Klar" },
+  { value: "editorial", label: "Redaktion" },
+  { value: "glass", label: "Glas" },
+  { value: "bold", label: "Kräftig" },
+];
 const MOOD_OPTIONS = ["😊", "😐", "😣", "😢", "😡", "😴"];
 const FLOW_OPTIONS = [
   { value: "none", label: "Keine" },
@@ -471,7 +478,8 @@ function closeDaySheet() {
 
 function renderSettings() {
   const el = document.getElementById("settings-container");
-  const { avgCycleLengthOverride, lutealPhaseLength, themeOverride, backupReminderEnabled, accent } = data.settings;
+  const { avgCycleLengthOverride, lutealPhaseLength, themeOverride, backupReminderEnabled, accent, uiStyle } = data.settings;
+  const currentStyle = uiStyle || "soft";
   const currentAccent = accent || "rose";
   const theme = themeOverride || "system";
   el.innerHTML = `
@@ -483,6 +491,15 @@ function renderSettings() {
           <button type="button" class="chip ${theme === "system" ? "chip--active" : ""}" data-theme-option="system">System</button>
           <button type="button" class="chip ${theme === "light" ? "chip--active" : ""}" data-theme-option="light">Hell</button>
           <button type="button" class="chip ${theme === "dark" ? "chip--active" : ""}" data-theme-option="dark">Dunkel</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <span class="field-label">Stil</span>
+        <div class="chip-row" id="style-chips">
+          ${STYLE_OPTIONS.map(
+            (o) =>
+              `<button type="button" class="chip ${currentStyle === o.value ? "chip--active" : ""}" data-style-option="${o.value}">${o.label}</button>`
+          ).join("")}
         </div>
       </div>
       <div class="field-group">
@@ -526,6 +543,16 @@ function renderSettings() {
       </div>
     </div>
   `;
+
+  el.querySelectorAll("#style-chips .chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      data.settings.uiStyle = chip.dataset.styleOption === "soft" ? null : chip.dataset.styleOption;
+      saveData(data);
+      applyTheme();
+      el.querySelectorAll("#style-chips .chip").forEach((c) => c.classList.remove("chip--active"));
+      chip.classList.add("chip--active");
+    });
+  });
 
   el.querySelectorAll("#accent-chips .chip").forEach((chip) => {
     chip.addEventListener("click", () => {
@@ -647,6 +674,12 @@ function setupCalendarNav() {
 }
 
 function applyTheme() {
+  const uiStyle = data.settings.uiStyle;
+  if (uiStyle && STYLE_OPTIONS.some((o) => o.value === uiStyle)) {
+    document.documentElement.dataset.style = uiStyle;
+  } else {
+    delete document.documentElement.dataset.style;
+  }
   const accent = data.settings.accent;
   if (accent && ACCENT_OPTIONS.some((a) => a.value === accent)) {
     document.documentElement.dataset.accent = accent;

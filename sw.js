@@ -1,4 +1,4 @@
-const CACHE_NAME = "zyklus-app-v11";
+const CACHE_NAME = "zyklus-app-v13";
 const SHELL_FILES = [
   "./",
   "./index.html",
