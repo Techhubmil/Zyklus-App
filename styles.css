@@ -306,8 +306,8 @@ main {
   gap: 6px;
 }
 .dot-legend {
-  width: 10px;
-  height: 10px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   display: inline-block;
 }
@@ -654,9 +654,9 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin-top: 10px;
-  font-size: 0.9rem;
+  gap: 10px;
+  margin-top: 14px;
+  font-size: 1.25rem;
 }
 .phase-dot {
   width: 10px;
@@ -667,8 +667,9 @@ textarea {
 
 .phase-sub {
   text-align: center;
-  font-size: 0.8rem;
-  margin-top: 4px;
+  font-size: 0.95rem;
+  margin-top: 6px;
+  margin-bottom: 4px;
 }
 
 /* ===== UI styles (structure and graphics stay the same, only the look changes) ===== */
