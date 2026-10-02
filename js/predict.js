@@ -67,8 +67,9 @@ function average(nums) {
 
 export function averageCycleLength(cycleLengths, override) {
   if (override) return override;
-  const lastSix = cycleLengths.slice(-6);
-  const avg = average(lastSix);
+  // gaps from untracked months (very long "cycles") would distort the prediction
+  const plausible = cycleLengths.filter((l) => l >= 15 && l <= 90);
+  const avg = average(plausible.slice(-6));
   return avg ? Math.round(avg) : 28;
 }
 
