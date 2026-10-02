@@ -602,3 +602,34 @@ textarea {
   vertical-align: -1px;
   box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.7);
 }
+
+/* Stats: cycle switcher */
+.stats-toggle {
+  margin-bottom: 12px;
+}
+.chip[disabled] {
+  opacity: 0.4;
+}
+.cycle-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.cycle-nav-title {
+  font-weight: 600;
+}
+.cal-nav[disabled] {
+  opacity: 0.3;
+}
+.stats-note {
+  text-align: center;
+  margin: 12px 0 0;
+}
+.history-row--tap {
+  cursor: pointer;
+}
+.history-row--active {
+  color: var(--pink);
+  font-weight: 600;
+}

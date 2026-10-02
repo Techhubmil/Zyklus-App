@@ -1,3 +1,5 @@
+import { diffDays, addDays } from "./predict.js";
+
 function formatDate(date) {
   return date.toLocaleDateString("de-DE", {
     day: "2-digit",
@@ -65,43 +67,101 @@ function phasePieChart(avgCycle, avgPeriod) {
   `;
 }
 
+const view = { mode: "all", index: null };
+
+function mean(nums) {
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
+}
+
+function shortDate(d) {
+  return d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+}
+
 export function renderStats(container, prediction) {
   const { cycleLengths, periodLengths, avgCycle, avgPeriod, periodStarts } = prediction;
 
-  const historyRows = periodStarts
-    .slice()
+  const cycles = periodStarts.map((start, i) => ({
+    start,
+    periodLen: periodLengths[i] || null,
+    cycleLen: cycleLengths[i] || null,
+    ongoing: i === periodStarts.length - 1,
+  }));
+
+  if (view.index === null || view.index >= cycles.length) view.index = cycles.length - 1;
+  if (view.mode === "cycle" && cycles.length === 0) view.mode = "all";
+
+  const rerender = () => renderStats(container, prediction);
+
+  let topHtml;
+  let pieHtml;
+  let pieTitle;
+
+  if (view.mode === "all") {
+    const completed = cycles.filter((c) => c.cycleLen);
+    const lens = completed.map((c) => c.cycleLen);
+    const pLens = cycles.filter((c) => c.periodLen && !c.ongoing).map((c) => c.periodLen);
+    const allCycle = lens.length ? Math.round(mean(lens)) : avgCycle;
+    const allPeriod = pLens.length ? Math.round(mean(pLens)) : avgPeriod;
+    const details = lens.length
+      ? `${lens.length} ${lens.length === 1 ? "Zyklus" : "Zyklen"} ausgewertet · kürzester ${Math.min(...lens)} · längster ${Math.max(...lens)} Tage`
+      : "Noch kein vollständiger Zyklus erfasst — angezeigt sind Standardwerte.";
+    const note =
+      lens.length && avgCycle !== allCycle
+        ? `<p class="muted stats-note">Die Vorhersage rechnet mit dem Ø der letzten 6 Zyklen (${avgCycle} Tage).</p>`
+        : "";
+    topHtml = `
+      <div class="stat-row">
+        <div class="stat-box"><div class="stat-value">${allCycle}</div><div class="stat-label">⌀ Zykluslänge (Tage)</div></div>
+        <div class="stat-box"><div class="stat-value">${allPeriod}</div><div class="stat-label">⌀ Periodendauer (Tage)</div></div>
+      </div>
+      <p class="muted stats-note">${details}</p>${note}`;
+    pieTitle = "Zyklusphasen (⌀ alle Zyklen)";
+    pieHtml = phasePieChart(allCycle, allPeriod);
+  } else {
+    const c = cycles[view.index];
+    const days = c.ongoing ? Math.max(1, diffDays(c.start, new Date()) + 1) : c.cycleLen;
+    const pieCycle = c.cycleLen || avgCycle;
+    const pieMore = c.ongoing ? " · erwartet" : "";
+    const range = c.cycleLen
+      ? `${shortDate(c.start)} – ${shortDate(addDays(c.start, c.cycleLen - 1))}`
+      : `ab ${shortDate(c.start)} (laufend)`;
+    topHtml = `
+      <div class="cycle-nav">
+        <button class="cal-nav" data-dir="-1" aria-label="Älterer Zyklus" ${view.index === 0 ? "disabled" : ""}>&#8249;</button>
+        <div class="cycle-nav-title">${range}</div>
+        <button class="cal-nav" data-dir="1" aria-label="Neuerer Zyklus" ${view.index === cycles.length - 1 ? "disabled" : ""}>&#8250;</button>
+      </div>
+      <div class="stat-row">
+        <div class="stat-box"><div class="stat-value">${days}</div><div class="stat-label">${c.ongoing ? "Tag im laufenden Zyklus" : "Zykluslänge (Tage)"}</div></div>
+        <div class="stat-box"><div class="stat-value">${c.periodLen || "–"}</div><div class="stat-label">Periodendauer (Tage)</div></div>
+      </div>`;
+    pieTitle = `Zyklusphasen${pieMore}`;
+    pieHtml = phasePieChart(pieCycle, c.periodLen || avgPeriod);
+  }
+
+  const historyRows = cycles
+    .map((c, i) => ({ c, i }))
     .reverse()
     .slice(0, 12)
-    .map((start, idx) => {
-      const indexFromStart = periodStarts.length - 1 - idx;
-      const length = periodLengths[indexFromStart];
-      const cycleLen = cycleLengths[indexFromStart - 1];
-      return `
-        <li class="history-row">
-          <span>${formatDate(start)}</span>
-          <span>${length ? length + " Tage" : "–"}</span>
-          <span>${cycleLen ? cycleLen + " Tage Zyklus" : "–"}</span>
-        </li>
-      `;
-    })
+    .map(
+      ({ c, i }) => `
+        <li class="history-row history-row--tap ${view.mode === "cycle" && view.index === i ? "history-row--active" : ""}" data-index="${i}">
+          <span>${formatDate(c.start)}</span>
+          <span>${c.periodLen ? c.periodLen + " Tage" : "–"}</span>
+          <span>${c.cycleLen ? c.cycleLen + " Tage Zyklus" : c.ongoing ? "läuft" : "–"}</span>
+        </li>`
+    )
     .join("");
 
   container.innerHTML = `
-    <div class="card">
-      <div class="stat-row">
-        <div class="stat-box">
-          <div class="stat-value">${avgCycle}</div>
-          <div class="stat-label">⌀ Zykluslänge (Tage)</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-value">${avgPeriod}</div>
-          <div class="stat-label">⌀ Periodendauer (Tage)</div>
-        </div>
-      </div>
+    <div class="chip-row stats-toggle">
+      <button type="button" class="chip ${view.mode === "all" ? "chip--active" : ""}" data-mode="all">Gesamt Ø</button>
+      <button type="button" class="chip ${view.mode === "cycle" ? "chip--active" : ""}" data-mode="cycle" ${cycles.length ? "" : "disabled"}>Pro Zyklus</button>
     </div>
+    <div class="card">${topHtml}</div>
     <div class="card">
-      <h3>Zyklusphasen (⌀)</h3>
-      ${phasePieChart(avgCycle, avgPeriod)}
+      <h3>${pieTitle}</h3>
+      ${pieHtml}
     </div>
     <div class="card">
       <h3>Verlauf</h3>
@@ -112,4 +172,24 @@ export function renderStats(container, prediction) {
       }
     </div>
   `;
+
+  container.querySelectorAll("[data-mode]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      view.mode = btn.dataset.mode;
+      rerender();
+    });
+  });
+  container.querySelectorAll(".cycle-nav .cal-nav").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      view.index = Math.min(cycles.length - 1, Math.max(0, view.index + Number(btn.dataset.dir)));
+      rerender();
+    });
+  });
+  container.querySelectorAll(".history-row--tap").forEach((row) => {
+    row.addEventListener("click", () => {
+      view.mode = "cycle";
+      view.index = Number(row.dataset.index);
+      rerender();
+    });
+  });
 }
